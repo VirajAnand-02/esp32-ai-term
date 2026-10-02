@@ -51,13 +51,21 @@ function posixTz(): string {
   const offsetMin = -now.getTimezoneOffset(); // JS gives it the other way round too
   const sign = offsetMin >= 0 ? "-" : "+";
   const abs = Math.abs(offsetMin);
-  const name = new Intl.DateTimeFormat("en", { timeZoneName: "short" })
-    .formatToParts(now)
-    .find((p) => p.type === "timeZoneName")?.value?.replace(/[^A-Za-z]/g, "") || "LOC";
   // Intl often hands back "GMT+5:30", which strips to a bare "GMT" — a label that
-  // would be actively wrong for anywhere that is not on it. The abbreviation is
-  // cosmetic (only %Z prints it) so an honest placeholder beats a wrong name.
-  const label = name.length >= 3 && !(name === "GMT" && offsetMin !== 0) ? name.slice(0, 5) : "LOC";
+  // would be actively wrong for anywhere that is not on it. Each locale only knows
+  // the abbreviations used there ("en" gives that for India, "en-IN" gives "IST"), so
+  // try a few. The label reaches the agent in list_schedule, where "LOC-5:30" read
+  // as UTC-5:30 is a real risk, so a recognisable name is worth the lookup.
+  const label =
+    ["en-US", "en-IN", "en-GB", "en-AU"]
+      .map((locale) =>
+        new Intl.DateTimeFormat(locale, { timeZoneName: "short" })
+          .formatToParts(now)
+          .find((p) => p.type === "timeZoneName")
+          ?.value?.replace(/[^A-Za-z]/g, ""),
+      )
+      .find((n) => n && n.length >= 3 && !((n === "GMT" || n === "UTC") && offsetMin !== 0))
+      ?.slice(0, 5) || "LOC";
   return `${label}${sign}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
 }
 
