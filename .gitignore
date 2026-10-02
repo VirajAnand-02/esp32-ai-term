@@ -1,0 +1,12 @@
+# secrets
+main/wifi_credentials.h     # wifi SSID + password + the device token
+ai-server/.env.local        # Supabase service key, admin password, all the model keys
+
+# build output and a 17 MB Windows binary
+build/
+ai-server/.next/
+ai-server/node_modules/
+ai-server/yt-dlp.exe
+managed_components/
+sdkconfig.old
+cli-client/

@@ -1,0 +1,8 @@
+dependencies:
+  espressif/led_strip: "^3.0.0"
+  # Not on the Espressif registry; LovyanGFX ships its own ESP-IDF component build.
+  # Its ST7789 init sends the full vendor sequence (porch, gate, VCOM, VRH, gamma),
+  # which this JMD-PS130 panel needs — esp_lcd's minimal init leaves it blank.
+  lovyangfx:
+    git: https://github.com/lovyan03/LovyanGFX.git
+    version: "1.2.30"
