@@ -1,0 +1,4 @@
+node_modules
+.next
+.env.local
+yt-dlp.exe
