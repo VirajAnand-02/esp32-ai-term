@@ -30,6 +30,7 @@
 #include "bsp_bench.h"
 #include "sounds.h"
 #include "time_tools.h"
+#include "todo_tools.h"
 #include "tools.h"
 #include "ui.h"
 #include "video_player.h"
@@ -89,15 +90,15 @@ static void on_wifi_state(net_wifi_state_t state, void *ctx)
     }
 }
 
-// The tools live in two files — the hardware ones and the clock's — and hello
-// wants a single array. Built once, small, and never freed, which is the whole of
-// its lifecycle.
+// The tools live in three files — the hardware ones, the clock's and the todo
+// list's — and hello wants a single array. Built once, small, and never freed,
+// which is the whole of its lifecycle.
 static const aiterm_tool_t *all_tools(size_t *count)
 {
     static aiterm_tool_t *merged;
     static size_t n;
     if (!merged) {
-        n = DEVICE_TOOL_COUNT + TIME_TOOL_COUNT;
+        n = DEVICE_TOOL_COUNT + TIME_TOOL_COUNT + TODO_TOOL_COUNT;
         merged = malloc(sizeof(aiterm_tool_t) * n);
         if (!merged) {
             *count = DEVICE_TOOL_COUNT;
@@ -105,6 +106,7 @@ static const aiterm_tool_t *all_tools(size_t *count)
         }
         memcpy(merged, DEVICE_TOOLS, sizeof(aiterm_tool_t) * DEVICE_TOOL_COUNT);
         memcpy(merged + DEVICE_TOOL_COUNT, TIME_TOOLS, sizeof(aiterm_tool_t) * TIME_TOOL_COUNT);
+        memcpy(merged + DEVICE_TOOL_COUNT + TIME_TOOL_COUNT, TODO_TOOLS, sizeof(aiterm_tool_t) * TODO_TOOL_COUNT);
     }
     *count = n;
     return merged;

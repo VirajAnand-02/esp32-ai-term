@@ -1,6 +1,10 @@
 # secrets
-main/wifi_credentials.h     # wifi SSID + password + the device token
-ai-server/.env.local        # Supabase service key, admin password, all the model keys
+# A comment has to be on its own line: after a path it becomes part of the pattern,
+# which is how wifi_credentials.h was pushed in the first commit.
+# wifi SSID + password + the device token
+main/wifi_credentials.h
+# Supabase service key, admin password, all the model keys
+ai-server/.env.local
 
 # build output and a 17 MB Windows binary
 build/

@@ -4,7 +4,8 @@
 // Where this terminal connects. Change the host after deploying the server:
 //   local dev : "ws://192.168.29.121:3000/ws"
 //   Railway   : "wss://<your-app>.up.railway.app/ws"
-#define AITERM_SERVER_URI "ws://192.168.29.121:3000/ws"
+// #define AITERM_SERVER_URI "ws://192.168.29.121:3000/ws"
+#define AITERM_SERVER_URI "wss://esp32-ai-term.onrender.com/ws"
 
 // The device token from the dashboard (Settings → Devices) lives in
 // wifi_credentials.h next to the Wi-Fi password, so this file stays shareable.

@@ -161,6 +161,16 @@ a bug that took a while to find.
   counted as the tap that starts a voice note.
 - **A `wifi_ap_record_t[24]` does not fit on the event loop task's stack.** The scan
   result buffer must be static; on the stack it overflows `sys_evt` and panics.
+- **`CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_CROSS_SIGNED_VERIFY=y` is what lets the device
+  reach Render.** Render sits behind Cloudflare, whose chain ends in `GTS Root R4`
+  *cross-signed by GlobalSign Root CA*. The IDF bundle looks up only the issuer of the
+  top certificate sent, GlobalSign Root CA is not in it, and the handshake fails with
+  `No matching trusted root certificate found` / `-0x3000` — even though `GTS Root R4`
+  itself is in the bundle. The option makes it match a root found inside the chain.
+  It looks like a memory problem from the outside (TLS on this board was new); it was
+  not. There is no `sdkconfig.defaults`, so a `fullclean` that regenerates `sdkconfig`
+  loses it. Plain `ws://` to Render does not work either: it answers 301 to https and
+  the websocket client does not follow it.
 
 ## The server
 
@@ -196,6 +206,10 @@ Read `ai-server/README.md` first. Things that bite:
   re-render on client navigation — without that warm-up a peer stays "not checked yet"
   until a full reload.
 
+- **The devices' timezone is the server process's.** The gateway turns its own zone into
+  the POSIX `tz` in `welcome`, and the device stores it in NVS. On Render that was UTC
+  and every clock face read 5:30 behind, so `node-env.ts` defaults `TZ` to
+  `Asia/Kolkata`; an explicit `TZ` in the host's environment still wins.
 - **A route an outside system posts to has to be added to the proxy's matcher**
   (`src/proxy.ts`). Everything under `/api/` 401s on the admin session cookie before the
   handler runs, so the symptom of forgetting is a route that looks missing. `/ws` and
@@ -236,7 +250,8 @@ the NanoClaw side in `nanoclaw/docs/aiterm-channel.md` (that second repo, not th
 
 ## Secrets and files that must not be committed
 
-The root is **not** a git repository today. If one is ever created, these must be ignored:
+The root is a git repository, pushed to a **public** GitHub repo
+(`VirajAnand-02/esp32-ai-term`). These must stay ignored:
 
 - `main/wifi_credentials.h` — SSID, wifi password, and the device token. The network
   in here is only a **seed** now: on the first boot with an empty store it becomes
@@ -246,9 +261,19 @@ The root is **not** a git repository today. If one is ever created, these must b
   `SUPABASE_SECRET_KEY`, `ADMIN_USERNAME` / `ADMIN_PASSWORD`, `SESSION_SECRET`.
 - `ai-server/yt-dlp.exe` — 17.8 MB binary, already in `ai-server/.gitignore`.
 
+**A `.gitignore` comment must be on its own line.** After a path it becomes part of the
+pattern, so the first commit (`v1`) ignored nothing on those lines and pushed
+`main/wifi_credentials.h` to the public repo; `.env.local` survived only because
+`ai-server/.gitignore` also covers it. Check with `git check-ignore -v <file>`, not by
+reading the ignore file.
+
+**`ai-server/` was once committed as a gitlink** (mode `160000`), because
+`create-next-app` had left a `.git` inside it; GitHub showed an unopenable folder. It is
+tracked as ordinary files now. A nested `.git` anywhere will do this again.
+
 `main/config.h` is deliberately shareable: the server URL lives there, the token does not.
-The server IP (`AITERM_SERVER_URI`) is a laptop on DHCP and changes; when the device cannot
-connect, check that first.
+`AITERM_SERVER_URI` now points at the Render deployment over `wss://`; the commented-out
+`ws://` line is the laptop on DHCP, whose IP changes — check that first when using it.
 
 ## Where things stand
 
@@ -256,7 +281,8 @@ Working and exercised on the hardware: the shell and launcher, settings in NVS, 
 dashboard, clock/timer/alarm/stopwatch/pomodoro, voice notes (record, list, play, seek),
 the agent terminal with push-to-talk, video with sound, images, the tone bank, web search,
 notifications with a drawer on DOWN from the dashboard, todos on RIGHT from it (daily
-and the rest, right again crosses between them), saved wifi networks with a character
+and the rest, right again crosses between them; the agent reaches them through
+`main/todo_tools.c` — before that it answered "add a todo" with an alarm), saved wifi networks with a character
 picker for the password, and agent memories at two scopes.
 
 **Attached agents work end to end**, verified on the hardware rather than reasoned about.
@@ -309,9 +335,13 @@ Open, in rough order of how much it matters:
    signature cannot tell memory pressure from the owner pressing Ctrl-C; it was diagnosed
    as memory twice on 2026-10-02 and was the owner both times. Check what is actually
    listening, then ask.
-4. **ffmpeg on Railway** (above), and the Render deployment in
-   [ai-server/DEPLOY-RENDER.md](ai-server/DEPLOY-RENDER.md) is written but has never been
-   run — the attached agent's base url in particular has to change for it.
+4. **The device runs against Render** (`https://esp32-ai-term.onrender.com`), confirmed
+   from `tool_calls` rows the board made through it after the cross-signed fix above. The
+   owner deploys by pushing to GitHub: **a change under `ai-server/` is not live until it
+   is committed and pushed**, and the owner has said to do that as part of the change.
+   On the free tier Render sleeps after 15 min idle, which drops the websocket and costs a
+   ~50 s cold start. The attached agent's base url still points at loopback and has to
+   change for Render. ffmpeg on Railway (above) is the same story for that host.
 5. **No second wifi network has been tried.** There is only one here, so "scan and move to
    another saved network when the link drops" is built and reviewed but not exercised.
 6. The Phase 0 bench (`bench.cpp`, three embedded JPEGs, `/bench`, `/soak`) is still in the
